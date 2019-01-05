@@ -1,0 +1,27 @@
+input {
+    file {
+        path => "/var/www/test-cli/storage/logs/laravel.log"
+        start_position => "beginning"
+        codec => multiline {
+            pattern => "^\[\d"
+            what => "previous"
+            negate => true
+        }
+    }
+}
+
+
+filter { 
+    grok {
+        match => { "message" => "\[%{TIMESTAMP_ISO8601:timestamp}\] %{DATA:env}\.%{DATA:severity}: %{DATA:message}" }
+    }
+} 
+
+output {
+    elasticsearch {
+        hosts => "http://es01:9200"
+        index => "laravel-logs-%{+YYYY-MM-dd}"
+        user => "elastic"
+        password => "PleaseChangeMe"
+    }
+}

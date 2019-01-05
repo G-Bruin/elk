@@ -1,0 +1,127 @@
+version: '2.2'
+
+services:
+  applications:
+    image: tianon/true
+    volumes:
+      - /Users/bruin/www/test-cli:/var/www/test-cli
+
+  es01:
+    container_name: es01
+    # image: docker.elastic.co/elasticsearch/elasticsearch:6.5.0
+    image: gbruin/elastic:latest
+    environment:
+      - node.name=es01
+      - discovery.zen.minimum_master_nodes=2
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.license.self_generated.type=trial
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.ssl.certificate_authorities=$CERTS_DIR/ca/ca.crt
+      - xpack.ssl.certificate=$CERTS_DIR/es01/es01.crt
+      - xpack.ssl.key=$CERTS_DIR/es01/es01.key
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+      - ./certs:$CERTS_DIR
+    networks:
+      - esnet
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+    healthcheck:
+      test: curl --cacert $CERTS_DIR/ca/ca.crt -s https://localhost:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  es02:
+    container_name: es02
+    # image: docker.elastic.co/elasticsearch/elasticsearch:6.5.0
+    image: gbruin/elastic:latest
+    environment:
+      - node.name=es02
+      - discovery.zen.minimum_master_nodes=2
+      - ELASTIC_PASSWORD=$ELASTIC_PASSWORD
+      - discovery.zen.ping.unicast.hosts=es01
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.license.self_generated.type=trial
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.ssl.certificate_authorities=$CERTS_DIR/ca/ca.crt
+      - xpack.ssl.certificate=$CERTS_DIR/es02/es02.crt
+      - xpack.ssl.key=$CERTS_DIR/es02/es02.key
+    networks:
+      - esnet
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata2:/usr/share/elasticsearch/data
+      - ./certs:$CERTS_DIR
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:6.5.0
+    environment:
+      ELASTICSEARCH_URL: "http://es01:9200"
+      ELASTICSEARCH_USERNAME: "elastic"
+      ELASTICSEARCH_PASSWORD: $ELASTIC_PASSWORD
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: "$CERTS_DIR/ca/ca.crt"
+    ports:
+      - 5601:5601
+    volumes:
+      - ./certs:$CERTS_DIR
+    networks:
+      - esnet
+    depends_on:
+      - es01
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:6.5.0
+    container_name: logstash
+    environment:
+      LS_JAVA_OPTS: "-Xmx512m -Xms512m"
+      XPACK_MANAGEMENT_ELASTICSEARCH_URL: http://es01:9200
+      XPACK_MANAGEMENT_ELASTICSEARCH_USERNAME: "elastic"
+      XPACK_MANAGEMENT_ELASTICSEARCH_PASSWORD: $ELASTIC_PASSWORD
+      XPACK_MANAGEMENT_ENABLED: "true"
+      XPACK_MANAGEMENT_PIPELINE_ID: "[main,php-logs]"
+      XPACK_MONITORING_ENABLED: "true"
+      XPACK_MONITORING_ELASTICSEARCH_URL: http://es01:9200
+      XPACK_MONITORING_ELASTICSEARCH_USERNAME: "elastic"
+      XPACK_MONITORING_ELASTICSEARCH_PASSWORD: $ELASTIC_PASSWORD
+#      XPACK_MONITORING_ELASTICSEARCH_SSL_CA: "$CERTS_DIR/ca/ca.crt"
+#      XPACK_MANAGEMENT_ELASTICSEARCH_SSL_CA: "$CERTS_DIR/ca/ca.crt"
+    networks:
+      - esnet
+    volumes_from:
+      - applications
+    depends_on:
+      - es01
+
+  wait_until_ready:
+    # image: docker.elastic.co/elasticsearch/elasticsearch:6.5.0
+    image: gbruin/elastic:latest
+    command: /usr/bin/true
+    depends_on:
+      es01:
+        condition: "service_healthy"
+
+volumes:
+  esdata1:
+    driver: local
+  esdata2:
+    driver: local
+
+networks:
+  esnet:
+
