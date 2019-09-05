@@ -1,0 +1,31 @@
+filebeat.prospectors:
+  - type: log
+    paths:
+      - /var/frontend/log/*.log
+    fields:
+      log_type: frontend
+      log_topics: default_list
+      domain: frontend.com
+    multiline:
+      pattern: ^\[\d
+      negate: true
+      match: after
+
+  - type: log
+    paths:
+      - /var/user-backend/log/*.log
+    fields:
+      log_type: user-backend
+      log_topics: user-backend-list
+      domain: user-backend.com
+    multiline:
+      pattern: ^\d
+      negate: true
+      match: after
+
+output.redis:
+  hosts: ["47.106.134.159"]
+  password: "fS5v1ZUzzs#"
+  key: '%{[fields][log_topics]}'
+  datatype: "channel"
+  db: 15

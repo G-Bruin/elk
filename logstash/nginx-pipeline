@@ -1,0 +1,23 @@
+input {
+    redis {
+        host => "192.168.1.178"
+        data_type => "channel"
+        key => "filebeat_nginx"
+        password => "xxxx"
+        db => 15
+    }
+}
+filter {
+    grok {
+        match => { "message" => "%{IPORHOST:clientip} - - \[%{HTTPDATE:timestamp}\] \"(?:%{WORD:verb} %{NOTSPACE:request}(?: HTTP/%{NUMBER:httpversion})?|%{DATA:rawrequest})\" %{NUMBER:response} (?:%{NUMBER:bytes}|-) %{QS:referrer} %{QS:agent}" }
+    }
+}
+
+output {
+    elasticsearch {
+        hosts => "http://es01:9200"
+        index => "nginx-logs-%{+YYYY-MM-dd}"
+        user => "elastic"
+        password => "PleaseChangeMe"
+    }
+}
