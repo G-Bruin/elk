@@ -29,3 +29,18 @@ output.redis:
   key: '%{[fields][log_topics]}'
   datatype: "channel"
   db: 15
+
+#-------------------------- Elasticsearch output ------------------------------
+#output.elasticsearch:
+  # Array of hosts to connect to.
+#  hosts: ["192.168.191.62:9200"]
+#  indices: 
+#    - index: "bianfengbpm-log-%{+yyyy.MM.dd}"
+#      when.contains:
+#        log_type: bianfengbpm
+#    - index: "im-log-%{+yyyy.MM.dd}"
+#      when.contains:
+#        log_type: im
+#  username: "elastic"
+#  password: "bianfeng"
+#  protocol: "https"
