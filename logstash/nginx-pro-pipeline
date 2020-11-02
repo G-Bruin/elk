@@ -1,0 +1,28 @@
+input {
+    redis {
+        host => "192.168.191.146"
+        data_type => "list"
+        key => "wenku-nginx"
+        password => "xxxxx"
+        db => 15
+    }
+}
+filter {
+    grok {
+        match => { "message" => "%{IP:ip} - - \[%{HTTPDATE:logtime}\] \"%{WORD:method} %{URIPATH:uri}(\?(.*))? HTTP/%{NUMBER:httpversion}\" %{NUMBER:status:int} %{NUMBER:body_sent:int} \"%{DATA:http_referer}\" \"%{DATA:http_user_agent}\" \"%{DATA:forwarded_for}\" \"%{DATA:request_time}\" \"%{DATA:response_time}\"" }
+    }
+    date {
+        match => ["logtime", "dd/MMM/YYYY:HH:mm:ss Z"]
+        target => "@timestamp"
+        remove_field => ["logtime"]
+    }
+}
+
+output {
+    elasticsearch {
+        hosts => "http://192.168.191.62:9200"
+        index => "wenku-nginx-%{+YYYY-MM-dd}"
+        user => "elastic"
+        password => "aaaaaa"
+    }
+}

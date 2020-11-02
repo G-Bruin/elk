@@ -1,0 +1,73 @@
+### linux cpu 报警监控
+{
+  "trigger": {
+    "schedule": {
+      "interval": "10m"
+    }
+  },
+  "input": {
+    "search": {
+      "request": {
+        "search_type": "query_then_fetch",
+        "indices": [
+          "metricbeat-*"
+        ],
+        "types": [],
+        "body": {
+          "query": {
+            "bool": {
+              "filter": [
+                {
+                  "range": {
+                    "@timestamp": {
+                      "gte": "now-{{ctx.metadata.window_period}}"
+                    }
+                  }
+                },
+                {
+                  "range": {
+                    "system.process.cpu.total.pct": {
+                      "gte": "{{ctx.metadata.threshold}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "condition": {
+    "compare": {
+      "ctx.payload.hits.total": {
+        "gte": 10
+      }
+    }
+  },
+  "actions": {
+    "email": {
+      "email": {
+        "profile": "standard",
+        "attachments": {
+          "datalles.json": {
+            "data": {
+              "format": "json"
+            }
+          }
+        },
+        "to": [
+          "xxxx@bianfeng.com",
+        ],
+        "subject": "🚩 CPU overhead",
+        "body": {
+          "html": "10分钟内下列主机cpu超载 {{ctx.metadata.threshold}} : <br><br>{{#ctx.payload.hits.hits}} <b>{{_source.beat.hostname}}</b> ({{_source.system.process.cpu.total.pct}}) <br> {{/ctx.payload.hits.hits}}"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "window_period": "10m",
+    "threshold": 0.9
+  }
+}

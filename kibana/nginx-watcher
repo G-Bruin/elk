@@ -1,0 +1,74 @@
+### 响应时长检查
+{
+  "trigger": {
+    "schedule": {
+      "interval": "30m"
+    }
+  },
+  "input": {
+    "search": {
+      "request": {
+        "search_type": "query_then_fetch",
+        "indices": [
+          "wenku-nginx*"
+        ],
+        "types": [],
+        "body": {
+          "query": {
+            "bool": {
+              "filter": [
+                {
+                  "range": {
+                    "@timestamp": {
+                      "gte": "now-{{ctx.metadata.window_period}}"
+                    }
+                  }
+                },
+                {
+                  "range": {
+                    "response_time": {
+                      "gte": "{{ctx.metadata.threshold}}"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "condition": {
+    "compare": {
+      "ctx.payload.hits.total": {
+        "gte": "{{ctx.metadata.hit}}"
+      }
+    }
+  },
+  "actions": {
+    "email": {
+      "email": {
+        "profile": "standard",
+        "attachments": {
+          "datalles.json": {
+            "data": {
+              "format": "json"
+            }
+          }
+        },
+        "to": [
+          "xxxxx@bianfeng.com",
+        ],
+        "subject": "wenku 耗时邮件推送",
+        "body": {
+          "html": "{{ctx.metadata.window_period}} 内出现 {{ctx.payload.hits.total}} 次响应时长大于 {{ctx.metadata.threshold}}s 的请求，<a href=\"http://192.168.191.62:5601/goto/f306dc7bb41887c54eba608b8ada4623\">查看详情</a><br> <br>{{#ctx.payload.hits.hits}} url: <b>{{_source.uri}}</b>  method: <b>{{_source.method}}</b>  response_time: <b>{{_source.response_time}}</b><br> {{/ctx.payload.hits.hits}}"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "hit": 1,
+    "window_period": "30m",
+    "threshold": 1
+  }
+}
